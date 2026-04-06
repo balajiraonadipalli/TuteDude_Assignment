@@ -13,12 +13,24 @@ function getDistance(pos1, pos2) {
 }
 
 /**
+ * Persist nearbyUsers for a user using updateOne (no ParallelSaveError).
+ * Operates at the query level — no document-level lock.
+ */
+function saveNearby(user) {
+  User.updateOne(
+    { socketId: user.socketId },
+    { $set: { nearbyUsers: user.nearbyUsers } }
+  ).catch((e) => console.error('saveNearby error:', e));
+}
+
+/**
  * Check proximity for a given user against all other users.
- * Returns { newlyNear: [], newlyFar: [] } relative to previous state.
+ * Emits chat:connect / chat:disconnect to affected sockets.
+ * All DB writes are non-blocking updateOne calls.
  */
 async function checkProximity(io, movedUser, allUsers) {
   const previousNearby = new Set(movedUser.nearbyUsers);
-  const currentNearby = new Set();
+  const currentNearby  = new Set();
 
   for (const [, otherUser] of allUsers) {
     if (otherUser.socketId === movedUser.socketId) continue;
@@ -28,57 +40,59 @@ async function checkProximity(io, movedUser, allUsers) {
     }
   }
 
-  // Find newly entered proximity
+  // Diff
   const newlyNear = [...currentNearby].filter((id) => !previousNearby.has(id));
-  // Find newly left proximity
-  const newlyFar = [...previousNearby].filter((id) => !currentNearby.has(id));
+  const newlyFar  = [...previousNearby].filter((id) => !currentNearby.has(id));
 
-  // Update DB
+  // Update in-memory state
   movedUser.nearbyUsers = [...currentNearby];
-  await movedUser.save();
+  // Persist non-blocking (no document lock)
+  saveNearby(movedUser);
 
-  // Emit chat:connect for newly close users (both sides)
+  // ── chat:connect for newly close users ────────────────────────────────────
   for (const nearId of newlyNear) {
     const nearUser = allUsers.get(nearId);
     if (!nearUser) continue;
 
-    // Update the other user's nearbyUsers too if not already there
+    // Update the other user's nearbyUsers in memory
     if (!nearUser.nearbyUsers.includes(movedUser.socketId)) {
       nearUser.nearbyUsers.push(movedUser.socketId);
-      await nearUser.save();
+      saveNearby(nearUser);
     }
 
-    // Notify moved user
     io.to(movedUser.socketId).emit('chat:connect', {
-      userId: nearId,
-      username: nearUser.username,
+      userId:      nearId,
+      username:    nearUser.username,
       avatarColor: nearUser.avatarColor,
       avatarEmoji: nearUser.avatarEmoji,
     });
 
-    // Notify the other user
     io.to(nearId).emit('chat:connect', {
-      userId: movedUser.socketId,
-      username: movedUser.username,
+      userId:      movedUser.socketId,
+      username:    movedUser.username,
       avatarColor: movedUser.avatarColor,
       avatarEmoji: movedUser.avatarEmoji,
     });
 
-    console.log(`📡 Proximity: ${movedUser.username} ↔ ${nearUser.username} CONNECTED`);
+    console.log(`📡 CONNECTED: ${movedUser.username} ↔ ${nearUser.username}`);
   }
 
-  // Emit chat:disconnect for users who moved away (both sides)
+  // ── chat:disconnect for users who moved away ──────────────────────────────
   for (const farId of newlyFar) {
     const farUser = allUsers.get(farId);
     if (farUser) {
       farUser.nearbyUsers = farUser.nearbyUsers.filter(
         (id) => id !== movedUser.socketId
       );
-      await farUser.save();
+      saveNearby(farUser);
     }
 
+    // Emit disconnect to BOTH sides immediately
     io.to(movedUser.socketId).emit('chat:disconnect', { userId: farId });
     io.to(farId).emit('chat:disconnect', { userId: movedUser.socketId });
+
+    const farName = farUser?.username || farId;
+    console.log(`📡 DISCONNECTED: ${movedUser.username} ↔ ${farName}`);
   }
 
   return { newlyNear, newlyFar };

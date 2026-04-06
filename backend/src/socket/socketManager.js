@@ -4,8 +4,8 @@ const { checkProximity } = require('../utils/proximity');
 // In-memory map for fast lookups: socketId -> User document
 const onlineUsers = new Map();
 
-// Throttle move events per socket (ms)
-const MOVE_THROTTLE = 50;
+// Throttle move events per socket (ms) — 100ms is smooth enough & reduces save collisions
+const MOVE_THROTTLE = 100;
 const lastMoveTime = new Map();
 
 function setupSocketManager(io) {
@@ -62,32 +62,34 @@ function setupSocketManager(io) {
 
     // ─── MOVE ────────────────────────────────────────────────────────────────
     socket.on('move', async ({ x, y }) => {
+      // Throttle
+      const now = Date.now();
+      const last = lastMoveTime.get(socket.id) || 0;
+      if (now - last < MOVE_THROTTLE) return;
+      lastMoveTime.set(socket.id, now);
+
+      const user = onlineUsers.get(socket.id);
+      if (!user) return;
+
+      // Update position IN MEMORY immediately (never blocked by DB)
+      user.position = { x, y };
+      user.lastSeen = new Date();
+
+      // Broadcast and proximity check right away — no await on save
+      socket.broadcast.emit('user_moved', { id: socket.id, x, y });
+
+      // Run proximity check (must succeed even if DB save fails)
       try {
-        // Throttle
-        const now = Date.now();
-        const last = lastMoveTime.get(socket.id) || 0;
-        if (now - last < MOVE_THROTTLE) return;
-        lastMoveTime.set(socket.id, now);
-
-        const user = onlineUsers.get(socket.id);
-        if (!user) return;
-
-        user.position = { x, y };
-        user.lastSeen = new Date();
-        await user.save();
-
-        // Broadcast position update to everyone else
-        socket.broadcast.emit('user_moved', {
-          id: socket.id,
-          x,
-          y,
-        });
-
-        // Run proximity check
         await checkProximity(io, user, onlineUsers);
       } catch (err) {
-        console.error('move error:', err);
+        console.error('proximity error:', err);
       }
+
+      // Persist position to DB with updateOne (no document locking, no ParallelSaveError)
+      User.updateOne(
+        { socketId: socket.id },
+        { $set: { position: { x, y }, lastSeen: user.lastSeen } }
+      ).catch((err) => console.error('position save error:', err));
     });
 
     // ─── CHAT MESSAGE ────────────────────────────────────────────────────────
