@@ -1,42 +1,87 @@
 # 🌌 Virtual Cosmos
 
-A **real-time 2D virtual environment** (Gather.town-style) where users can move around an office map and proximity-based chat connects/disconnects automatically.
-
-> **Assignment**: TuteDude Frontend + Backend Assignment
+A real-time 2D virtual environment where users can move around and chat with nearby users — proximity-based interaction, like Gather.town.
 
 ---
 
 ## ✨ Features
 
-| Feature | Description |
-|---|---|
-| 🗺️ Tiled Office Map | Top-down 2D office with floors, walls, rooms, desks, plants |
-| 🧑 Character Avatars | Emoji-style avatars with custom color + glow on connection |
-| ⌨️ WASD Movement | Smooth keyboard-controlled movement with collision detection |
-| 🔄 Real-time Sync | All user positions synced via Socket.IO |
-| 📡 Proximity Detection | Server-side Euclidean distance check (150px radius) |
-| 💬 Auto Chat | Chat panel appears when close, disappears when far |
-| 🎴 Portrait Cards | Floating avatar cards at top (Gather.town style) |
-| 🔢 User Count | Live count of users in the space |
-| 🚪 Room Labels | Named rooms: Room 1, Room 2, Open Space |
+- 🗺️ **2D Office Map** — rendered on HTML5 Canvas with tiled rooms, desks, and walkable paths
+- 🕹️ **WASD / Arrow Key Movement** — smooth avatar movement with collision detection
+- 📡 **Real-time Proximity Detection** — server detects when users are within 200px of each other
+- 💬 **Proximity Chat** — chat panel opens automatically when users get close
+- 👥 **Multi-user** — see all other users' avatars and names on the map
+- 🎨 **Custom Avatars** — choose your emoji and color on the join screen
 
 ---
 
-## 🛠️ Tech Stack
+## 🧱 Tech Stack
 
-### Frontend
-- **React** + **Vite** – Fast dev server and build
-- **PixiJS** – GPU-accelerated 2D canvas rendering
-- **Tailwind CSS** – Utility-first styling
-- **Zustand** – Lightweight state management
-- **Socket.IO Client** – Real-time communication
-- **React Router** – Client-side routing
+| Layer | Tech |
+|---|---|
+| Frontend | React (Vite), HTML5 Canvas 2D, Zustand, Socket.IO Client |
+| Backend | Node.js, Express, Socket.IO, MongoDB (Mongoose) |
+| Realtime | WebSocket via Socket.IO |
 
-### Backend
-- **Node.js** + **Express** – HTTP + REST API server
-- **Socket.IO** – WebSocket real-time events
-- **MongoDB** + **Mongoose** – User/session persistence
-- **Nodemon** – Dev auto-restart
+---
+
+## 🚀 Local Setup
+
+### 1. Clone
+
+```bash
+git clone https://github.com/balajiraonadipalli/TuteDude_Assignment.git
+cd TuteDude_Assignment
+```
+
+### 2. Backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env    # add your MONGO_URI
+npm run dev             # starts on http://localhost:4000
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev             # starts on http://localhost:5173
+```
+
+---
+
+## 🌐 Deployment
+
+### Frontend → Vercel
+
+| Setting | Value |
+|---|---|
+| Root Directory | `frontend` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | `npm install` |
+
+**Environment variable in Vercel:**
+```
+VITE_SOCKET_URL = https://your-backend.onrender.com
+```
+
+### Backend → Render
+
+| Setting | Value |
+|---|---|
+| Root Directory | `backend` |
+| Build Command | `npm install` |
+| Start Command | `npm start` |
+
+**Environment variables in Render:**
+```
+MONGO_URI = mongodb+srv://...
+PORT      = 4000
+```
 
 ---
 
@@ -44,137 +89,45 @@ A **real-time 2D virtual environment** (Gather.town-style) where users can move 
 
 ```
 TuteDude_Assignment/
-├── frontend/
+├── backend/
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── CosmosCanvas.jsx   # PixiJS tile map + avatars
-│   │   │   ├── TopBar.jsx         # Top navigation bar
-│   │   │   ├── PortraitCards.jsx  # Floating avatar cards
-│   │   │   ├── ChatPanel.jsx      # Right-side chat panel
-│   │   │   ├── BottomToolbar.jsx  # Bottom action bar
-│   │   │   └── JoinScreen.jsx     # Join / login screen
-│   │   ├── hooks/
-│   │   │   └── useKeyboardMovement.js
-│   │   ├── map/
-│   │   │   └── officeMap.js       # 40×25 tile grid data
-│   │   ├── pages/
-│   │   │   └── CosmosScreen.jsx
-│   │   ├── socket/
-│   │   │   └── socket.js          # Socket.IO client singleton
-│   │   └── store/
-│   │       └── cosmosStore.js     # Zustand global state
-│   └── vite.config.js
+│   │   ├── config/db.js          # MongoDB connection
+│   │   ├── models/User.js        # User schema
+│   │   ├── socket/socketManager.js  # Socket.IO events
+│   │   ├── utils/proximity.js    # Distance detection
+│   │   └── index.js              # Express + Socket.IO server
+│   └── package.json
 │
-└── backend/
-    └── src/
-        ├── config/db.js           # MongoDB connection
-        ├── models/User.js         # Mongoose user model
-        ├── routes/userRoutes.js   # REST API routes
-        ├── socket/socketManager.js # Socket.IO events
-        ├── utils/proximity.js     # Distance check engine
-        └── index.js               # Server entry point
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   ├── CosmosCanvas.jsx  # HTML5 Canvas 2D renderer
+    │   │   ├── ChatPanel.jsx     # Proximity chat UI
+    │   │   ├── JoinScreen.jsx    # Entry screen
+    │   │   ├── TopBar.jsx        # Header bar
+    │   │   ├── BottomToolbar.jsx # Tool buttons
+    │   │   └── PortraitCards.jsx # Nearby user cards
+    │   ├── hooks/
+    │   │   ├── useKeyboardMovement.js  # WASD movement
+    │   │   └── useSocketEvents.js      # Persistent socket handlers
+    │   ├── map/officeMap.js      # Tile map definition
+    │   ├── store/cosmosStore.js  # Zustand global state
+    │   └── socket/socket.js      # Socket.IO singleton
+    └── package.json
 ```
-
----
-
-## 🚀 Setup & Run
-
-### Prerequisites
-- Node.js v18+
-- MongoDB running locally (`mongod`) **OR** use a free MongoDB Atlas URI
-
-### 1. Clone & install
-
-```bash
-# Backend
-cd backend
-npm install
-
-# Frontend
-cd ../frontend
-npm install
-```
-
-### 2. Configure backend
-
-```bash
-cd backend
-cp .env.example .env
-# Edit .env and set your MONGODB_URI if not using local MongoDB
-```
-
-Default `.env`:
-```
-PORT=4000
-MONGODB_URI=mongodb://localhost:27017/virtualcosmos
-CLIENT_URL=http://localhost:5173
-```
-
-### 3. Run both servers
-
-**Terminal 1 – Backend:**
-```bash
-cd backend
-npm run dev
-```
-
-**Terminal 2 – Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-### 4. Open the app
-
-Navigate to **http://localhost:5173**
-
-Open multiple tabs to simulate multiple users!
 
 ---
 
 ## 🎮 How to Play
 
-1. Enter your name, pick an avatar emoji and color
-2. Click **Enter Cosmos**
-3. Use **WASD** or **Arrow Keys** to move around the office
-4. **Move close** to another user → Chat panel appears automatically
-5. **Send messages** while in proximity
-6. **Move away** → Chat disconnects
+1. Enter your name, choose an avatar & color → **Enter Cosmos**
+2. Use **WASD** or arrow keys to move your avatar
+3. **Get close** to another user (within ~200px) → chat panel opens automatically
+4. Type messages — they appear in real-time on both screens
+5. Move away → chat disconnects
 
 ---
 
-## 🔌 Socket Events
+## 📸 Demo
 
-| Event | Direction | Payload |
-|---|---|---|
-| `join` | Client→Server | `{ username, avatarColor, avatarEmoji, position }` |
-| `world_state` | Server→Client | `{ me, users[] }` |
-| `user_joined` | Server→All | `user` |
-| `move` | Client→Server | `{ x, y }` |
-| `user_moved` | Server→Others | `{ id, x, y }` |
-| `chat:connect` | Server→Client | `{ userId, username, avatarColor, avatarEmoji }` |
-| `chat:disconnect` | Server→Client | `{ userId }` |
-| `chat:message` | Client→Server | `{ toUserId, text }` |
-| `chat:message` | Server→Client | `{ fromUserId, fromUsername, text, timestamp }` |
-| `user_left` | Server→All | `{ id }` |
-
----
-
-## 📡 REST API
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | API health check |
-| GET | `/api/users/active` | List all online users |
-
----
-
-## 📹 Demo
-
-[Watch demo video](#) ← Add link here
-
----
-
-## 👤 Author
-
-Built for TuteDude Assignment – Virtual Cosmos
+> Open two browser tabs on `http://localhost:5173`, join as different users, and navigate towards each other!

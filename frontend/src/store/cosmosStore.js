@@ -88,4 +88,35 @@ export const useCosmosStore = create((set, get) => ({
 
   isConnected: false,
   setConnected: (v) => set({ isConnected: v }),
+
+  // ── Toolbar features ───────────────────────────────────────────────────────
+  isRecording: false,
+  toggleRecording: () => set((s) => ({ isRecording: !s.isRecording })),
+
+  handRaised: false,
+  toggleHand: () => set((s) => ({ handRaised: !s.handRaised })),
+
+  // { [userId]: emoji } – reactions floating above avatars on canvas
+  reactions: {},
+  setReaction: (userId, emoji) => {
+    set((s) => ({ reactions: { ...s.reactions, [userId]: emoji } }));
+    setTimeout(() => {
+      set((s) => {
+        const r = { ...s.reactions };
+        if (r[userId] === emoji) delete r[userId];
+        return { reactions: r };
+      });
+    }, 3000);
+  },
+
+  // Active overlay panel: null | 'reactions' | 'apps' | 'settings'
+  activePanel: null,
+  setActivePanel: (p) => set((s) => ({ activePanel: s.activePanel === p ? null : p })),
+
+  // Toast notifications { message, type }
+  toast: null,
+  showToast: (message, type = 'success') => {
+    set({ toast: { message, type } });
+    setTimeout(() => set({ toast: null }), 2500);
+  },
 }));

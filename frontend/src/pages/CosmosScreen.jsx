@@ -8,6 +8,7 @@ import ChatPanel from '../components/ChatPanel';
 import BottomToolbar from '../components/BottomToolbar';
 import { useKeyboardMovement } from '../hooks/useKeyboardMovement';
 import { useSocketEvents } from '../hooks/useSocketEvents';
+import Toast from '../components/Toast';
 
 export default function CosmosScreen() {
   const myUser = useCosmosStore((s) => s.myUser);
@@ -39,8 +40,11 @@ export default function CosmosScreen() {
       <ChatPanel />
       <BottomToolbar />
 
-      {/* WASD hint (fades after 5s via CSS) */}
+      {/* WASD hint */}
       <WASDHint />
+
+      {/* Toast notifications */}
+      <Toast />
     </div>
   );
 }

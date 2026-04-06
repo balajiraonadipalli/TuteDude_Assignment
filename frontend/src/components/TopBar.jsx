@@ -5,6 +5,8 @@ export default function TopBar() {
   const userCount   = useCosmosStore((s) => s.userCount);
   const nearbyUsers = useCosmosStore((s) => s.nearbyUsers);
   const isConnected = useCosmosStore((s) => s.isConnected);
+  const isRecording = useCosmosStore((s) => s.isRecording);
+  const handRaised  = useCosmosStore((s) => s.handRaised);
 
   return (
     <div
@@ -38,6 +40,32 @@ export default function TopBar() {
         <span style={{ fontSize: '12px', color: '#64748b' }}>
           {myUser?.currentRoom || 'Open Space'}
         </span>
+
+        {/* REC badge */}
+        {isRecording && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            padding: '3px 8px', borderRadius: '6px',
+            background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)',
+          }}>
+            <div style={{
+              width: '7px', height: '7px', borderRadius: '50%', background: '#ef4444',
+              animation: 'recBlink 1s ease-in-out infinite',
+            }} />
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444' }}>REC</span>
+          </div>
+        )}
+
+        {/* Hand raised badge */}
+        {handRaised && (
+          <div style={{
+            padding: '3px 8px', borderRadius: '6px',
+            background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)',
+            fontSize: '11px', fontWeight: 700, color: '#f59e0b',
+          }}>
+            ✋ Hand Raised
+          </div>
+        )}
       </div>
 
       {/* ── Center: Call controls ── */}
